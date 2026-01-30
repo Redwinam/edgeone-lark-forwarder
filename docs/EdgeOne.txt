@@ -1,0 +1,191 @@
+Webhook 端点配置详解
+什么是端点
+端点是您服务器上的一个 URL，用于接收来自 Pages 的 Webhook 请求。
+请求格式
+当事件发生时，Pages 会向您的端点发送 HTTP POST 请求。
+HTTP 请求头：
+POST /webhooks/edgeone-pages HTTP/1.1
+Host: example.com
+Content-Type: application/json
+Accept: application/json, text/plain, */*
+Accept-Encoding: gzip, compress, deflate, br
+Authorization: Bearer xxx
+Connection: keep-alive
+请求体示例（JSON 格式）：
+部署事件示例（deployment.created）：
+{
+  "eventType": "deployment.created",
+  "appId": "app-123",
+  "projectId": "project-456",
+  "deploymentId": "deploy-789",
+  "projectName": "my-project",
+  "repoBranch": "main",
+  "timestamp": "2024-01-13T12:34:56.789Z"
+}
+项目事件示例（project.created）：
+{
+  "eventType": "project.created",
+  "appId": "app-123",
+  "projectId": "project-456",
+  "projectName": "my-project",
+  "repoUrl": "https://github.com/user/repo",
+  "timestamp": "2024-01-13T12:34:56.789Z"
+}
+域名事件示例（domain.added）：
+{
+  "eventType": "domain.added",
+  "appId": "app-123",
+  "projectId": "project-456",
+  "projectName": "my-project",
+  "domainName": "example.com",
+  "domainId": "domain-789",
+  "timestamp": "2024-01-13T12:34:56.789Z"
+}
+字段说明：
+字段
+类型
+说明
+出现场景
+eventType
+string
+事件类型
+所有事件
+appId
+string
+账户 ID
+所有事件
+projectId
+string
+项目 ID
+所有事件
+timestamp
+string
+事件发生的时间戳（ISO 8601 格式）
+所有事件
+projectName
+string
+项目名称
+所有事件
+deploymentId
+string
+部署 ID
+部署事件
+repoBranch
+string
+Git 分支
+部署事件
+repoUrl
+string
+仓库 URL
+项目事件
+domainName
+string
+域名
+域名事件
+domainId
+string
+域名 ID
+域名事件
+注意：
+如果您的端点返回非 2xx 状态码或无法访问，Pages 会采取指数退避策略自动重试最多 3 次。
+如何实现端点
+您需要在自己的服务器上实现一个端点来接收 Webhook 请求。以下是一个 Cloud Functions 的示例：
+/**
+ * API 路径: /webhooks/demo
+ */
+﻿
+/**
+ * 验证 Bearer Token（可选）
+ */
+function verifyToken(authHeader, expectedToken) {
+  if (!expectedToken) return true; // 未配置则跳过验证
+  
+  const parts = authHeader?.split(' ');
+  if (parts?.length !== 2 || parts[0] !== 'Bearer') return false;
+  
+  return parts[1] === expectedToken;
+}
+﻿
+/**
+ * 处理 webhook 事件
+ */
+function handleEvent(eventType, data) {
+  switch (eventType) {
+    case 'deployment.created':
+      console.log(`🚀 部署创建: ${data.projectName} (${data.repoBranch})`);
+      // 在此添加你的业务逻辑
+      // 例如: 发送通知、更新数据库等
+      return { message: '部署事件已处理', projectName: data.projectName };
+      
+    case 'project.created':
+      console.log(`📁 项目创建: ${data.projectName}`);
+      return { message: '项目事件已处理', projectName: data.projectName };
+    // 更多事件可参考支持的事件类型
+    default:
+      console.log(`⚠️ 未知事件: ${eventType}`);
+      return { message: '未知事件类型', eventType };
+  }
+}
+﻿
+/**
+ * Cloud Function 入口
+ */
+export async function onRequest(context) {
+  const { request, env } = context;
+﻿
+  // 1. 健康检查
+  if (request.method === 'GET') {
+    return new Response(JSON.stringify({ status: 'ok', message: 'Webhook endpoint is ready' }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+﻿
+  // 2. 只接受 POST
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+﻿
+  try {
+    // 3. 验证 Bearer Token（可选）
+    const authHeader = request.headers.get('authorization');
+    const webhookToken = env.WEBHOOK_TOKEN;
+    
+    if (webhookToken && !verifyToken(authHeader, webhookToken)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+﻿
+    // 4. 解析请求体
+    const payload = await request.json();
+    const eventType = payload.eventType || payload.type;
+﻿
+    // 5. 处理事件
+    const result = handleEvent(eventType, payload);
+﻿
+    // 6. 返回成功响应
+    return new Response(JSON.stringify({
+      success: true,
+      eventType,
+      result,
+      timestamp: new Date().toISOString()
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+﻿
+  } catch (error) {
+    console.error('处理错误:', error);
+    return new Response(JSON.stringify({
+      error: 'Internal server error',
+      message: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
