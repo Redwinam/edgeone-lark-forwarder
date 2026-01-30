@@ -49,6 +49,7 @@ export default defineEventHandler(async (event) => {
       ]
       break
 
+    case 'deployment.succeeded':
     case 'deployment.success': // Assuming this might exist or for future use
       cardTitle = `✅ (${body.projectName || '未知'}) 部署成功`
       headerTemplate = 'green'
@@ -57,12 +58,15 @@ export default defineEventHandler(async (event) => {
           tag: 'div',
           fields: [
             createField('分支', body.repoBranch || '未知'),
-             createField('部署 ID', body.deploymentId || '未知')
+            createField('部署 ID', body.deploymentId || '未知'),
+            createField('项目 ID', body.projectId || '未知'),
+            createField('时间', body.timestamp || new Date().toISOString())
           ]
         }
       ]
       break
       
+    case 'deployment.failure':
     case 'deployment.failed': // Assuming this might exist
       cardTitle = `❌ (${body.projectName || '未知'}) 部署失败`
       headerTemplate = 'red'
@@ -71,7 +75,9 @@ export default defineEventHandler(async (event) => {
           tag: 'div',
           fields: [
             createField('分支', body.repoBranch || '未知'),
-            createField('部署 ID', body.deploymentId || '未知')
+            createField('部署 ID', body.deploymentId || '未知'),
+            createField('项目 ID', body.projectId || '未知'),
+            createField('时间', body.timestamp || new Date().toISOString())
           ]
         }
       ]
