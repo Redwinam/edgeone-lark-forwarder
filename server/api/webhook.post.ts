@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
 
   switch (eventType) {
     case 'deployment.created':
-      cardTitle = `🚀 (${body.projectName || '未知'}) 部署已创建`
+      cardTitle = `🚀 ${body.projectName || '未知'} 部署已创建`
       headerTemplate = 'blue'
       cardElements = [
         {
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
 
     case 'deployment.succeeded':
     case 'deployment.success': // Assuming this might exist or for future use
-      cardTitle = `✅ (${body.projectName || '未知'}) 部署成功`
+      cardTitle = `✅ ${body.projectName || '未知'} 部署成功`
       headerTemplate = 'green'
        cardElements = [
         {
@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
       
     case 'deployment.failure':
     case 'deployment.failed': // Assuming this might exist
-      cardTitle = `❌ (${body.projectName || '未知'}) 部署失败`
+      cardTitle = `❌ ${body.projectName || '未知'} 部署失败`
       headerTemplate = 'red'
        cardElements = [
         {
@@ -84,7 +84,7 @@ export default defineEventHandler(async (event) => {
       break
 
     case 'project.created':
-      cardTitle = `📁 (${body.projectName || '未知'}) 项目已创建`
+      cardTitle = `📁 ${body.projectName || '未知'} 项目已创建`
       headerTemplate = 'turquoise'
       cardElements = [
         {
@@ -97,7 +97,7 @@ export default defineEventHandler(async (event) => {
       break
 
     case 'domain.added':
-      cardTitle = `🌐 (${body.projectName || '未知'}) 域名已添加`
+      cardTitle = `🌐 ${body.projectName || '未知'} 域名已添加`
       headerTemplate = 'violet'
       cardElements = [
         {
